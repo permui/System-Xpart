@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "*.v": "coq",
+        "syscall.h": "c",
+        "proc.h": "c",
+        "trap.h": "c",
+        "printk.h": "c",
+        "string.h": "c",
+        "rand.h": "c",
+        "types.h": "c"
+    }
+}
