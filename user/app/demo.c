@@ -1,4 +1,4 @@
-#include "syscall.h"
+#include "../include/syscall.h"
 #include "stdio.h"
 
 register void* current_sp __asm__("sp");
