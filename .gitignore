@@ -1,2 +1,8 @@
 .vscode
 d.s
+*.o
+*.bin
+*.elf
+Image
+System.map
+vmlinux
