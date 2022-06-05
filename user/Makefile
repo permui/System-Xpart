@@ -38,7 +38,7 @@ $(BUILT_IN):
 
 $(USER_TARGET): % : app/%.o $(BUILT_IN) $(DST_DIR)
 	$(LD) -T env/link.ld -o $(DST_DIR)/$@ -melf64lriscv --build-id -X $< --whole-archive  $(BUILT_IN)   # --strip-debug
-	# $(OBJCOPY) $(DST_DIR)/$@ -O binary $(DST_DIR)/$@.bin
+	$(OBJCOPY) $(DST_DIR)/$@ -O binary $(DST_DIR)/$@.bin
 
 image: $(USER_TARGET) $(SYSROOT)
 	cd $(DST_DIR); cp $(USER_TARGET) $(SYSROOT)

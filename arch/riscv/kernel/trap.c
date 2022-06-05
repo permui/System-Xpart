@@ -15,6 +15,7 @@
 #define ECALL_FROM_U_MODE 8
 #define LOAD_PAGE_FAULT 13
 #define STORE_PAGE_FAULT 15
+#define ILLEGAL_INSTRUCTION 2
 
 typedef unsigned long uint64;
 
@@ -48,8 +49,9 @@ void handle_page_fault(uint64 exception_code, struct pt_regs *regs) {
     }
     // ok, map range
     uint64 pstart = 0;
-    if (0 <= addr && addr < (uint64)uapp_end - (uint64)uapp_start) {
-        pstart = va_to_pa((uint64)uapp_start); 
+    if (0 <= addr && addr < USER_PROGRAM_LEN) {
+        // panic("mapping user code, this does not work"); // todo
+        pstart = (uint64)0x84200000; 
     } else {
         pstart = current->thread_info->user_stack_pa;
         if (!pstart) pstart = va_to_pa((uint64)kcalloc(PGSIZE));
@@ -64,6 +66,7 @@ void print_trap(uint64 isi, uint64 exc) {
     if (!isi && exc == LOAD_PAGE_FAULT) s = "load page fault";
     if (!isi && exc == STORE_PAGE_FAULT) s = "store page fault";
     if (!isi && exc == ECALL_FROM_U_MODE) s = "ecall from U-mode";
+    if (!isi && exc == ILLEGAL_INSTRUCTION) s = "illegal instruction";
     printk("trap: %s\n", s);
 }
 

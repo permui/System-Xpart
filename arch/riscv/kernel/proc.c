@@ -5,6 +5,7 @@
 #include "vm.h"
 #include "string.h"
 #include "slub.h"
+#include "fs.h"
 
 extern void __dummy();
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
@@ -49,24 +50,30 @@ struct task_struct *create_task() {
     return t;
 }
 
+void load_elf(struct task_struct *t, const char *path) {
+    struct inode *i = namei(path);
+    uint64 x;
+    readi(i, 0, &x, 0, 8);
+    printk("load_elf: x = %016lx\n", x);
+    panic("todo"); // todo
+}
+
 void create_first_task() {
     struct task_struct *t = create_task();
 
     t->thread.ra = (uint64)__dummy;
     t->thread.sp = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
 
-    t->thread.sepc = USER_START;
-    t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
-    t->thread.sscratch = USER_END;
-
     t->page_table = va_to_pa((uint64)create_user_page_table());
 
-    uint64 _uapp_start = (uint64)uapp_start;
-    uint64 _uapp_end = (uint64)uapp_end;
-    uint64 _uapp_len = _uapp_end - _uapp_start;
+    load_elf(t, "shell");
 
-    do_mmap(t->mm, USER_START, _uapp_end - _uapp_start, VM_READ | VM_WRITE | VM_EXEC);
-    do_mmap(t->mm, USER_END - PGSIZE, PGSIZE, VM_READ | VM_WRITE);
+    // t->thread.sepc = USER_START;
+    // t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
+    // t->thread.sscratch = USER_END;
+
+    // do_mmap(t->mm, USER_START, USER_PROGRAM_LEN, VM_READ | VM_WRITE | VM_EXEC);
+    // do_mmap(t->mm, USER_END - PGSIZE, PGSIZE, VM_READ | VM_WRITE);
 
     task[t->tid] = t;
 }

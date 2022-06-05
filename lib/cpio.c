@@ -1,13 +1,15 @@
 #include "fs.h"
 #include "mm.h"
 #include "slub.h"
-#include "stdio.h"
+#include "string.h"
+// #include "stdio.h"
+#include "consts.h"
 
 #define ALIGN4(value) (((size_t)value + 3) >> 2 << 2)
 
-uintptr_t *initrd_start = 0x4000000UL + DEV_VM_START;
-int cpio_header_size = 14 * 8 - 2;
+#define CPIO_HEADER_SIZE (sizeof(struct cpio_newc_header))
 
+// uintptr_t *initrd_start = 0x4000000UL + DEV_VM_START;
 size_t getFieldVal(char *field, int length) {
     size_t value = 0;
     for (int i = 0; i < length; i++) {
@@ -54,7 +56,7 @@ int check_file_name(char *tar, char *cmp) {
 
 struct cpio_stat cpio_find_file(char *name) {
     struct cpio_stat stat = {.c_ino = 0};
-    struct cpio_newc_header *p = initrd_start;
+    struct cpio_newc_header *p = (struct cpio_newc_header *)INITRD_START; 
 
     if ((name[0] == '.') && (name[1] == '/')) {
         name += 2;
@@ -63,7 +65,7 @@ struct cpio_stat cpio_find_file(char *name) {
     }
 
     while (check_file_name("TRAILER!!!", p->c_name)) {
-        Log("Current is: %s", p->c_name);
+        // Log("Current is: %s", p->c_name);
 
         if (!check_file_name(name, p->c_name)) {
             stat.c_ino = getFieldVal(p->c_ino, 8);
@@ -77,12 +79,12 @@ struct cpio_stat cpio_find_file(char *name) {
             stat.c_devminor = getFieldVal(p->c_devminor, 8);
             stat.c_rdevmajor = getFieldVal(p->c_rdevmajor, 8);
             stat.c_rdevminor = getFieldVal(p->c_rdevminor, 8);
-            stat.data = (void *)p + ALIGN4(cpio_header_size + getFieldVal(p->c_namesize, 8));
+            stat.data = (void *)p + ALIGN4(CPIO_HEADER_SIZE + getFieldVal(p->c_namesize, 8));
 
             return stat;
         }
 
-        p = (void *)p + ALIGN4(cpio_header_size + getFieldVal(p->c_namesize, 8)) + ALIGN4(getFieldVal(p->c_filesize, 8));
+        p = (void *)p + ALIGN4(CPIO_HEADER_SIZE + getFieldVal(p->c_namesize, 8)) + ALIGN4(getFieldVal(p->c_filesize, 8));
     }
 
     return stat;
@@ -105,29 +107,29 @@ struct cpio_stat cpio_find_file(char *name) {
 // flag..
 // flag={HappyNewYear2021}.
 
-void fs_test() {
-    struct cpio_stat stat = cpio_find_file("flag");
-    if (stat.c_ino) {
-        puts("Get File: \n");
-        printf("\tc_ino->%lx\n", stat.c_ino);
-        printf("\tc_mode->%lx\n", stat.c_mode);
-        printf("\tc_uid->%lx\n", stat.c_uid);
-        printf("\tc_gid->%lx\n", stat.c_gid);
-        printf("\tc_nlink->%lx\n", stat.c_nlink);
-        printf("\tc_mtime->%lx\n", stat.c_mtime);
-        printf("\tc_filesize->%lx\n", stat.c_filesize);
-        printf("\tc_devmajor->%lx\n", stat.c_devmajor);
-        printf("\tc_devminor->%lx\n", stat.c_devminor);
-        printf("\tc_rdevmajor->%lx\n", stat.c_rdevmajor);
-        printf("\tc_rdevminor->%lx\n", stat.c_rdevminor);
-        puts("File Content: \n");
-        char *value = stat.data;
-        for (int i = 0; i < stat.c_filesize; i++) {
-            putchar(value[i]);
-        }
-        puts("\n");
-    }
-}
+// void fs_test() {
+//     struct cpio_stat stat = cpio_find_file("flag");
+//     if (stat.c_ino) {
+//         puts("Get File: \n");
+//         printf("\tc_ino->%lx\n", stat.c_ino);
+//         printf("\tc_mode->%lx\n", stat.c_mode);
+//         printf("\tc_uid->%lx\n", stat.c_uid);
+//         printf("\tc_gid->%lx\n", stat.c_gid);
+//         printf("\tc_nlink->%lx\n", stat.c_nlink);
+//         printf("\tc_mtime->%lx\n", stat.c_mtime);
+//         printf("\tc_filesize->%lx\n", stat.c_filesize);
+//         printf("\tc_devmajor->%lx\n", stat.c_devmajor);
+//         printf("\tc_devminor->%lx\n", stat.c_devminor);
+//         printf("\tc_rdevmajor->%lx\n", stat.c_rdevmajor);
+//         printf("\tc_rdevminor->%lx\n", stat.c_rdevminor);
+//         puts("File Content: \n");
+//         char *value = stat.data;
+//         for (int i = 0; i < stat.c_filesize; i++) {
+//             putchar(value[i]);
+//         }
+//         puts("\n");
+//     }
+// }
 
 struct inode *namei(char *path) {
     struct inode *n = kmalloc(sizeof(struct inode));
@@ -140,6 +142,6 @@ struct inode *namei(char *path) {
 int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
     struct cpio_stat *stat = ip->i_private;
     void *base = stat->data;
-    memmove(dst, base + off, n);
+    memcpy(dst, base + off, n);
     return n;
 }

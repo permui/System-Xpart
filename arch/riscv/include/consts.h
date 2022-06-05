@@ -44,4 +44,10 @@
 // kernel stack
 #define KERNEL_STACK_SIZE (PGSIZE << 2)
 
+// initrd
+#define INITRD_START (VM_START + OPENSBI_SIZE + 0x4000000)
+
+// user program len
+#define USER_PROGRAM_LEN 3332
+
 #endif
