@@ -17,7 +17,7 @@
 
 #define PGSIZE 0x1000
 #define PGROUNDDOWN(addr) ((addr) & (~(PGSIZE - 1)))
-#define PGROUNDUP(addr) PGROUNDDOWN(addr + PGSIZE - 1)
+#define PGROUNDUP(addr) PGROUNDDOWN((addr) + PGSIZE - 1)
 
 // user space virtual address
 #define USER_START (0x0000000000000000)
@@ -40,5 +40,8 @@
 #define VM_READ     0x00000001
 #define VM_WRITE    0x00000002
 #define VM_EXEC     0x00000004
+
+// kernel stack
+#define KERNEL_STACK_SIZE (PGSIZE << 2)
 
 #endif

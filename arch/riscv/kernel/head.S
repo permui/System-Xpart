@@ -25,7 +25,8 @@ _start:
 	call setup_vm_first  // build up first page table
 	call relocate  // launch virtual memory
 
-    call mm_init  // simple-memory-management initialize
+    call init_buddy_system  // buddy system initialize
+    call slub_init
 
 	call setup_vm_second  // build up second page table and point satp to it
 

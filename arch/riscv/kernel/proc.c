@@ -1,10 +1,10 @@
-#include "mm.h"
 #include "proc.h"
 #include "rand.h"
 #include "defs.h"
 #include "printk.h"
 #include "vm.h"
 #include "string.h"
+#include "slub.h"
 
 extern void __dummy();
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
@@ -18,7 +18,7 @@ extern char uapp_start[], uapp_end[];
 extern uint64 second_page_table[512];
 
 uint64* create_user_page_table() {
-    uint64 *root_table = (uint64*)kalloc();
+    uint64 *root_table = (uint64*)kcalloc(PGSIZE);
 
     // copy kernel mappings to user page table
     // since the U-bit is not set in kernel mappings,
@@ -32,17 +32,17 @@ uint64* create_user_page_table() {
 // also alloc memory for t.(thread_info, mm, trapframe)
 struct task_struct *create_task() {
     uint64 tid = ++tot_task;
-    struct task_struct *t = (struct task_struct*)kalloc();
+    struct task_struct *t = (struct task_struct*)kcalloc(sizeof(struct task_struct));
 
     t->state = TASK_RUNNING;
     t->counter = 0;
     t->priority = rand_range(1, 10);
     t->tid = tid;
 
-    t->thread_info = (struct thread_info *)kalloc();
+    t->thread_info = (struct thread_info *)kcalloc(sizeof(struct thread_info));
     t->thread_info->user_stack_pa = 0;
-    t->mm = (struct mm_struct *)kalloc();
-    t->trapframe = (struct pt_regs *)kalloc();
+    t->mm = (struct mm_struct *)kcalloc(sizeof(struct mm_struct));
+    t->trapframe = (struct pt_regs *)kcalloc(sizeof(struct pt_regs));
 
     task[t->tid] = t;
 
@@ -53,7 +53,7 @@ void create_first_task() {
     struct task_struct *t = create_task();
 
     t->thread.ra = (uint64)__dummy;
-    t->thread.sp = (uint64)t + PGSIZE;
+    t->thread.sp = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
 
     t->thread.sepc = USER_START;
     t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
@@ -72,7 +72,7 @@ void create_first_task() {
 }
 
 void task_init() {
-    idle = (struct task_struct*)kalloc();
+    idle = (struct task_struct*)kcalloc(sizeof(struct task_struct));
     idle->state = TASK_RUNNING;
     idle->counter = 0;
     idle->priority = 0;

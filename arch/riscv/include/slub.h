@@ -3,6 +3,10 @@
 
 #include <list.h>
 
+// YAY: now we have two "page size" definition. 
+// They are both (1 << 12) bytes.
+// Be careful about this!
+
 #define NR_PARTIAL 9
 #define PAGE_SHIFT 12
 #define PPN_SHIFT 10
@@ -68,6 +72,7 @@ void kmem_cache_free(void *);
 
 
 void *kmalloc(size_t);
-void kfree(const void *);
+void *kcalloc(size_t);
+void kfree(void *);
 
 #endif

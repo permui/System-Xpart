@@ -2,8 +2,8 @@
 #include "trap.h"
 #include "proc.h"
 #include "printk.h"
-#include "mm.h"
 #include "string.h"
+#include "slub.h"
 
 extern struct task_struct *current;
 extern void child_ret_from_clone();
@@ -45,14 +45,14 @@ void sys_clone(struct pt_regs *regs)  {
 
     // child's user stack
     {
-        char *p = (char*)kalloc();
+        char *p = (char*)kcalloc(PGSIZE);
         memcpy(p, (const void *)(USER_END - PGSIZE), PGSIZE);
         child->thread_info->user_stack_pa = va_to_pa((uint64)p);
     }
 
     // child -> thread
     child->thread.ra = (uint64)child_ret_from_clone;
-    child->thread.sp = (uint64)child + PGSIZE;
+    child->thread.sp = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
     // we don't bother s0 ~ s12, sepc, sscratch
     // because they doesn't matter
     child->thread.sstatus = current->thread.sstatus;
@@ -64,7 +64,7 @@ void sys_clone(struct pt_regs *regs)  {
     {
         struct vm_area_struct *p = current->mm->mmap;
         if (p == NULL) child->mm->mmap = NULL; else {
-            struct vm_area_struct *q = (struct vm_area_struct *)kalloc();
+            struct vm_area_struct *q = (struct vm_area_struct *)kcalloc(sizeof(struct vm_area_struct));
             child->mm->mmap = q;
             q->vm_mm = child->mm;
             q->vm_start = p->vm_start;
@@ -72,7 +72,7 @@ void sys_clone(struct pt_regs *regs)  {
             q->vm_prev = q->vm_next = NULL;
             q->vm_flags = p->vm_flags;
             for (p = p->vm_next; p; p = p->vm_next) {
-                struct vm_area_struct *r = (struct vm_area_struct *)kalloc();
+                struct vm_area_struct *r = (struct vm_area_struct *)kcalloc(sizeof(struct vm_area_struct));
                 r->vm_mm = child->mm;
                 r->vm_start = p->vm_start;
                 r->vm_end = p->vm_end;

@@ -2,8 +2,8 @@
 #include <types.h>
 #include <string.h>
 #include <printk.h>
-#include <mm.h>
 #include <vm.h>
+#include "slub.h"
 
 /**
  * assume mm != NULL
@@ -41,7 +41,7 @@ void insert(struct mm_struct *mm, struct vm_area_struct *p) {
 uint64 do_mmap(struct mm_struct *mm, uint64 addr, uint64 length, int prot) {
     printk("do_mmap(%lu, %lu)\n", addr, length);
     if (intersect(mm, addr, addr + length)) addr = get_unmapped_area(mm, length);
-    struct vm_area_struct *p = (struct vm_area_struct *)kalloc();
+    struct vm_area_struct *p = (struct vm_area_struct *)kcalloc(sizeof(struct vm_area_struct));
     p->vm_start = addr;
     p->vm_end = addr + length;
     p->vm_flags = prot;
@@ -98,17 +98,23 @@ static void first_map(uint64 va, uint64 pa, uint64 flags) {
 }
 
 void setup_vm_first() {
-	memset(first_page_table, 0, PGSIZE);
-	uint64 pa = 0x80000000;
-	uint64 va2 = 0xffffffe000000000l;
-	first_map(va2, pa, PTE_X | PTE_W | PTE_R);
+	// memset(first_page_table, 0, PGSIZE);
+	// uint64 pa = 0x80000000;
+	// uint64 va2 = 0xffffffe000000000l;
+	// first_map(va2, pa, PTE_X | PTE_W | PTE_R);
+
+    // for simplicity, let's adopt the two-mapping scheme
+    memset(first_page_table, 0, PGSIZE);
+    uint64 pa = 0x80000000;
+    uint64 va1 = 0x80000000l, va2 = 0xffffffe000000000l;
+    first_map(va1, pa, PTE_X | PTE_W | PTE_R);
+    first_map(va2, pa, PTE_X | PTE_W | PTE_R);
 }
 
 static uint64 get_or_create_internal_entry(uint64 *table, uint64 idx) {
 	if (table[idx] & PTE_V) return table[idx];
 	// get a new page
-	// kalloc() gets us an *empty (all zero)* page
-	uint64 va = kalloc(), pa = va_to_pa(va);
+	uint64 va = (uint64)kcalloc(PGSIZE), pa = va_to_pa(va);
 	uint64 pte = compose_pte(pa, PTE_V);
 	table[idx] = pte;
 	return pte;

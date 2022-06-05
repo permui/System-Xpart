@@ -8,7 +8,7 @@
 #include "../include/syscall.h"
 #include "vm.h"
 #include "panic.h"
-#include "mm.h"
+#include "slub.h"
 
 #define SUPERVISOR_TIMER_INTERRUPT 5
 #define INSTRUCTION_PAGE_FAULT 12
@@ -21,7 +21,7 @@ typedef unsigned long uint64;
 extern struct task_struct *current;
 extern char uapp_start[], uapp_end[];
 
-static int first_page_fault = 0;
+// static int first_page_fault = 0;
 
 uint64 exception_code_to_vm_flags(uint64 exception_code) {
     switch (exception_code) {
@@ -52,7 +52,7 @@ void handle_page_fault(uint64 exception_code, struct pt_regs *regs) {
         pstart = va_to_pa((uint64)uapp_start); 
     } else {
         pstart = current->thread_info->user_stack_pa;
-        if (!pstart) pstart = va_to_pa(kalloc());
+        if (!pstart) pstart = va_to_pa((uint64)kcalloc(PGSIZE));
     }
     map_range((uint64*)pa_to_va(current->page_table), p->vm_start, p->vm_end, pstart, vm_flags_to_pte_flags(p->vm_flags) | PTE_U);
 }
@@ -71,14 +71,14 @@ void trap_handler(uint64 scause, struct pt_regs *regs) {
     uint64 is_interrupt = scause >> 63 & 1;
     uint64 exception_code = scause & 31;
     print_trap(is_interrupt, exception_code);
-    if (!is_interrupt && exception_code == INSTRUCTION_PAGE_FAULT && !first_page_fault) {
-        // first page fault for relocation
-        // this will be executed only once
-        printk("first Instruction Page Fault at PC = %016lx\n", regs->sepc);
-        regs->sepc += PA2VA_OFFSET;
-        first_page_fault = 1;
-        return;
-    }
+    // if (!is_interrupt && exception_code == INSTRUCTION_PAGE_FAULT && !first_page_fault) {
+    //     // first page fault for relocation
+    //     // this will be executed only once
+    //     printk("first Instruction Page Fault at PC = %016lx\n", regs->sepc);
+    //     regs->sepc += PA2VA_OFFSET;
+    //     first_page_fault = 1;
+    //     return;
+    // }
 
     // normal trap handlers
 
