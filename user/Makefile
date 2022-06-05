@@ -1,24 +1,49 @@
-ASM_SRC		= $(filter-out uapp.S, $(sort $(wildcard *.S)))
-C_SRC       = $(sort $(wildcard *.c))
-OBJ		    = $(patsubst %.S,%.o,$(ASM_SRC)) $(patsubst %.c,%.o,$(C_SRC))
+SRC_DIR			=	$(CURDIR)
+DST_DIR			=	$(SRC_DIR)/build
+SYSROOT			=	$(DST_DIR)/sysroot
 
-CFLAG = -march=$(ISA) -mabi=$(ABI) -mcmodel=medany -fno-builtin -ffunction-sections -fdata-sections -nostartfiles -nostdlib -nostdinc -static -lgcc -Wl,--nmagic
+include $(SRC_DIR)/app/Makefile
 
-all: uapp.o
+CROSS_PREFIX	=	riscv64-unknown-elf-
+CC				=	$(CROSS_PREFIX)gcc
+LD				=	$(CROSS_PREFIX)ld
+AR				= 	$(CROSS_PREFIX)ar
+OBJCOPY			=	$(CROSS_PREFIX)objcopy
 
-uapp.o: uapp.S uapp.bin
-	${GCC} ${CFLAG} -c uapp.S
-	${OBJDUMP} -d uapp.elf > uapp.ds
+ISA			=	rv64ima
+ABI			=	lp64
+INCLUDE		=	-I$(SRC_DIR)/include
+CFLAG		=	-march=$(ISA) -mabi=$(ABI) -mcmodel=medany \
+				-ffunction-sections -fdata-sections -nostartfiles \
+				-nostdlib -nostdinc -fno-builtin \
+				-g3 -static $(INCLUDE)
 
-%.o:%.c
-	${GCC} ${CFLAG} -c $<
+BUILD_LIST	= 	env lib
+BUILT_IN	=	$(addsuffix /built-in.a,$(BUILD_LIST))
 
-%.o:%.S
-	${GCC} ${CFLAG}  -c $<
+IMAGE		= 	simple_fs.cpio
+IMAGE	   :=	$(addprefix $(DST_DIR)/,$(IMAGE))
 
-uapp.bin: $(OBJ)
-	${GCC} ${CFLAG} -fpie -T link.lds -o uapp.elf ${OBJ}
-	${OBJCOPY} uapp.elf -O binary uapp.bin
+export DST_DIR CC LD AR OBJCOPY CFLAG
+
+.PHONY: all user clean
+
+all: image
+
+$(DST_DIR) $(SYSROOT):
+	mkdir -p $@
+
+$(BUILT_IN):
+	$(MAKE) -C $(dir $@)
+
+$(USER_TARGET): % : app/%.o $(BUILT_IN) $(DST_DIR)
+	$(LD) -T env/link.ld -o $(DST_DIR)/$@ -melf64lriscv --build-id -X $< --whole-archive  $(BUILT_IN)   # --strip-debug
+	# $(OBJCOPY) $(DST_DIR)/$@ -O binary $(DST_DIR)/$@.bin
+
+image: $(USER_TARGET) $(SYSROOT)
+	cd $(DST_DIR); cp $(USER_TARGET) $(SYSROOT)
+	echo "flag={HappyNewYear2021}" > $(SYSROOT)/flag
+	cd $(SYSROOT); find . | cpio -o -H newc > $(IMAGE)
 
 clean:
-	$(shell rm *.o uapp.o uapp.elf uapp.bin 2>/dev/null)
+	rm -rf **/*.o **/built-in.a $(BUILT_IN) build

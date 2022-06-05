@@ -1,0 +1,11 @@
+# IDE
+.vscode/
+
+# generated files
+*.o
+built-in.a
+log
+simple_fs.cpio
+testelf*
+build
+

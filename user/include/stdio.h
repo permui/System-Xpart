@@ -11,3 +11,6 @@
 
 
 int printf(const char *, ...);
+int fprintf(int fd, const char* fmt, ...);
+
+void panic(char* s);
