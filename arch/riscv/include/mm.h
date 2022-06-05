@@ -14,6 +14,6 @@ void mm_init();
 uint64 kalloc();
 
 // free the page that contains the input location
-void kfree(uint64);
+void kfreepage(uint64);
 
 #endif

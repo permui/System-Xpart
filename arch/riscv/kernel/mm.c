@@ -20,7 +20,7 @@ uint64 kalloc() {
     return (uint64) r;
 }
 
-void kfree(uint64 addr) {
+void kfreepage(uint64 addr) {
     struct run *r;
 
     // PGSIZE align 
@@ -38,7 +38,7 @@ void kfree(uint64 addr) {
 void kfreerange(char *start, char *end) {
     char *addr = (char *)PGROUNDUP((uint64)start);
     for (; (uint64)(addr) + PGSIZE <= (uint64)end; addr += PGSIZE) {
-        kfree((uint64)addr);
+        kfreepage((uint64)addr);
     }
 }
 
