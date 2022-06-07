@@ -223,8 +223,9 @@ __switch_to:
 
     ret
 
-    .global _child_ret_from_clone
-_child_ret_from_clone:
+    .global _ret_by_trapframe
+    // child_ret_from_clone, sys_execve use this
+_ret_by_trapframe:
     // a0 is the child's trapframe
 
     REG_L t0, 272(a0)

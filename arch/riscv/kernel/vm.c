@@ -132,7 +132,7 @@ static uint64 get_or_create_internal_entry(uint64 *table, uint64 idx) {
 */
 void map_range(uint64 *root_table, uint64 vstart, uint64 vend, uint64 pstart, uint64 flags) {
 
-	for (; vstart < vend; vstart += PGSIZE, pstart += PGSIZE) {
+ 	for (; vstart < vend; vstart += PGSIZE, pstart += PGSIZE) {
 		uint64 vpn[3], tmp = vstart >> 12;
 		uint64 *table = root_table;
 		for (int j = 0; j < 3; ++j, tmp >>= 9) vpn[j] = tmp & ((1l << 9) - 1);
@@ -141,6 +141,39 @@ void map_range(uint64 *root_table, uint64 vstart, uint64 vend, uint64 pstart, ui
 			table = (uint64*)pte_to_va(pte);
 		}
 		table[vpn[0]] = compose_pte(pstart, flags | PTE_V);
+	}
+	
+}
+
+/**
+ * @param vstart must be aligned to page boundary
+ * @param vend can be not aliged to page boundary
+ * @param free_frame whether free the physical frame under this map (FREE_FRAME_YES, FREE_FRAME_NO)
+ */
+void unmap_range(uint64 *root_table, uint64 vstart, uint64 vend, uint64 free_frame) {
+    for (; vstart < vend; vstart += PGSIZE) {
+		uint64 vpn[3], tmp = vstart >> 12;
+		uint64 *table = root_table;
+		for (int j = 0; j < 3; ++j, tmp >>= 9) vpn[j] = tmp & ((1l << 9) - 1);
+		for (int j = 2; j > 0 && table; --j) {
+			uint64 pte = table[vpn[j]];
+			table = pte & PTE_V ? (uint64*)pte_to_va(pte) : NULL;
+		}
+        if (table) {
+            uint64 pte = table[vpn[0]];
+            if (pte & PTE_V) {
+                if (free_frame == FREE_FRAME_YES) {
+                    void *q = (void*)pte_to_va(pte);
+                    // here is a danger: if we allocate 2 pages,
+                    // and call kfree on the beginning of the first page,
+                    // our Buddy & SLUB system will free the 2 pages together.
+                    // what if we call kfree on the beginning of the second page?
+                    // maybe problem
+                    kfree(q);
+                }
+                table[vpn[0]] = 0; // clear and invalid
+            }
+        }
 	}
 }
 

@@ -46,11 +46,13 @@ struct task_struct {
 
     struct pt_regs *trapframe;
 
-    // that is, the initial kernel stack pointer
+    // that is, the initial kernel sp
     uint64 kernel_stack_top;
 };
 
 uint64* create_user_page_table();
+
+uint64 init_with_elf(struct task_struct *t, const char *path);
 
 struct task_struct *create_task();
 

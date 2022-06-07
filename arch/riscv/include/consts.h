@@ -54,4 +54,8 @@
 // user program len
 #define USER_PROGRAM_LEN 3332
 
+// free frame
+#define FREE_FRAME_YES 1
+#define FREE_FRAME_NO 0
+
 #endif

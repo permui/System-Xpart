@@ -10,7 +10,7 @@
 
 extern struct task_struct *current;
 extern void child_ret_from_clone();
-extern void _child_ret_from_clone(struct pt_regs *);
+extern void _ret_by_trapframe(struct pt_regs *);
 extern void _ret_from_execve();
 
 void syscall(struct pt_regs *regs) {
@@ -52,37 +52,20 @@ void sys_write(struct pt_regs *regs) {
 }
 
 void child_ret_from_clone() {
-    _child_ret_from_clone(current->trapframe);
+    _ret_by_trapframe(current->trapframe);
 }
 
 void sys_clone(struct pt_regs *regs)  {
     struct task_struct *child = create_task();
 
-    uint64 parent_user_sp = regs->sscratch;
-
     // child's page table
     child->page_table = va_to_pa((uint64)create_user_page_table());
 
-    // child's user stack
+    // child's memory
     {
-        // parent's current stack is copied and mapped in child's address space
-        uint64 parent_stack_low = PGROUNDDOWN(parent_user_sp);
-        uint64 parent_stack_size = USER_END - parent_stack_low;
-        uint64 parent_stack_flags = find_vma(current->mm, parent_user_sp)->vm_flags;
-        // this is not necessary: we don't need the physical pages to be continuous
-        // we can alloc and copy page by page
-        char *p = (char*)kcalloc(parent_stack_size); 
-        memcpy(p, (const void *)parent_stack_low, parent_stack_size);
-        map_range((uint64*)pa_to_va(child->page_table), parent_stack_low, USER_END, va_to_pa((uint64)p), vm_flags_to_pte_flags(parent_stack_flags) | PTE_U);
-    }
-
-    // child's other memory
-    {
-        // copy parent's other memory, namely those recorded by vm_area_structs, excluding the stack, to child
-        // and map them
+        // copy parent's memory to child, map them in child's page table
         struct vm_area_struct *p = current->mm->mmap;
-        for (; p; p = p->vm_next) if (p->vm_end != USER_END) {
-            // not the stack
+        for (; p; p = p->vm_next) {
             uint64 start = p->vm_start;
             uint64 end = p->vm_end;
             uint64 size = end - start;
@@ -143,12 +126,34 @@ void sys_read(struct pt_regs *regs) {
 }
 
 void sys_execve(struct pt_regs *regs) {
-    char *path = regs->x[10];
+    const char *path = (const char*)regs->x[10];
     
     // we assume the path points to a legal elf file
      
     // current -> state, counter, priority, tid : no change
     // current -> thread : does not matter. we don't use _switch_to to go back
 
-    panic("working");
+    // clear current's memory
+    uint64 *root_ptb = (uint64*)pa_to_va(current->page_table);
+    {
+        struct vm_area_struct *p = current->mm->mmap;
+        while (p) {
+            struct vm_area_struct *q = p->vm_next;
+            unmap_range(root_ptb, p->vm_start, p->vm_end, FREE_FRAME_YES);
+            kfree(p);
+            p = q;
+        }
+        current->mm->mmap = NULL;
+    }
+
+    uint64 entry_va = init_with_elf(current, path);
+
+    do_mmap(current->mm, USER_END, 0, VM_READ | VM_WRITE);
+
+    for (int i = 0; i < 32; ++i) current->trapframe->x[i] = 0;
+    current->trapframe->sepc = entry_va;
+    current->trapframe->sscratch = USER_END;
+    current->trapframe->stval = 0; // doesn't matter
+
+    _ret_by_trapframe(current->trapframe);
 }

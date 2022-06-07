@@ -45,6 +45,8 @@ uint64 vm_flags_to_pte_flags(uint64 vm_flags);
 
 void map_range(uint64 *root_table, uint64 vstart, uint64 vend, uint64 pstart, uint64 flags);
 
+void unmap_range(uint64 *root_table, uint64 vstart, uint64 vend, uint64 free_frame);
+
 void setup_vm_first();
 
 void setup_vm_second();

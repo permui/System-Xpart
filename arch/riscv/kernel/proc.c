@@ -54,14 +54,17 @@ struct task_struct *create_task() {
     return t;
 }
 
-void load_elf(struct task_struct *t, const char *path) {
+// it initialize a task "t" with an elf file named by "path"
+// it assumes "t->page_table" is already created.
+// it load the elf into memory, map them, create vma entry
+// it does not bother the user stack, only bother the user code
+// it returns the entry point (virtual address)
+uint64 init_with_elf(struct task_struct *t, const char *path) {
     struct inode *i = namei(path);
     struct elfhdr hdr;
     readi(i, 0, &hdr, 0, sizeof(hdr));
-    printk("load_elf: hdr. = %03x\n", hdr.magic);
-    printk("file size = %lu\n", get_file_size(i));
 
-    uint64 *page_table_va = create_user_page_table();
+    uint64 *page_table_va = (uint64*)pa_to_va(t->page_table);
     
     // load "LOAD" segments: copy into memory, map_range in page_table
     uint proghdr_size = sizeof(struct proghdr);
@@ -86,14 +89,7 @@ void load_elf(struct task_struct *t, const char *path) {
         }
     }
 
-    t->page_table = va_to_pa((uint64)page_table_va);
-
-    t->thread.sepc = hdr.entry;
-    t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
-    t->thread.sscratch = USER_END;
-
-    do_mmap(t->mm, USER_END - USER_STACK_LIMIT, USER_STACK_LIMIT, VM_READ | VM_WRITE);
-
+    return hdr.entry;
 }
 
 void create_first_task() {
@@ -102,8 +98,17 @@ void create_first_task() {
     t->thread.ra = (uint64)__dummy;
     t->thread.sp = t->kernel_stack_top;
 
-    load_elf(t, "shell");
+    uint64 *page_table_va = create_user_page_table();
+    t->page_table = va_to_pa((uint64)page_table_va);
 
+    uint64 entry_va = init_with_elf(t, "shell");
+
+    do_mmap(t->mm, USER_END, 0, VM_READ | VM_WRITE);
+
+    t->thread.sepc = entry_va;
+    t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
+    t->thread.sscratch = USER_END;
+ 
     // t->page_table = va_to_pa((uint64)create_user_page_table());
 
     // t->thread.sepc = USER_START;

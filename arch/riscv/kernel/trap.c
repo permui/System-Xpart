@@ -9,6 +9,7 @@
 #include "vm.h"
 #include "panic.h"
 #include "slub.h"
+#include "utils.h"
 
 #define SUPERVISOR_TIMER_INTERRUPT 5
 #define INSTRUCTION_PAGE_FAULT 12
@@ -39,28 +40,41 @@ uint64 exception_code_to_vm_flags(uint64 exception_code) {
 
 void handle_page_fault(uint64 exception_code, struct pt_regs *regs) {
     uint64 addr = regs->stval;
-    struct vm_area_struct *p = find_vma(current->mm, addr);
-    if (p == NULL) {
-        panic("page fault, access not in vmas");
-    }
-    uint64 c = exception_code_to_vm_flags(exception_code);
-    if ((c & p->vm_flags) != c) {
-        panic("page fault, illegal access mode");
-    }
 
-    // the stack part
-    if (p->vm_end == USER_END) {
-        uint64 pstart = va_to_pa((uint64)kcalloc(PGSIZE));
-        uint64 v_start = PGROUNDDOWN(addr);
-        uint64 v_end = PGROUNDUP(addr);
-        map_range((uint64*)pa_to_va(current->page_table), v_start, v_end, pstart, vm_flags_to_pte_flags(p->vm_flags) | PTE_U);
+    // special handling for user stack
+    if (USER_END - USER_STACK_LIMIT <= addr && addr < USER_END) {
+        struct vm_area_struct *p = current->mm->mmap;
+        for (; p && p->vm_end != USER_END; p = p->vm_next);
+        myassert(p != NULL);
+        myassert(p->vm_end == USER_END);
+        myassert(addr < p->vm_start);
+
+        uint64 c = exception_code_to_vm_flags(exception_code);
+        if ((c & p->vm_flags) != c) {
+            panic("page fault, illegal access mode for stack");
+        }
+
+        uint64 the_start = PGROUNDDOWN(addr);
+        uint64 the_end = p->vm_start;
+        uint64 the_size = the_end - the_start;
+        uint64 pstart = va_to_pa((uint64)kmalloc(the_size));
+        map_range((uint64*)pa_to_va(current->page_table), the_start, the_end, pstart, vm_flags_to_pte_flags(p->vm_flags) | PTE_U);
+        p->vm_start = the_start;
     } else {
-        panic("unexpected page fault");
+        struct vm_area_struct *p = find_vma(current->mm, addr);
+        if (p == NULL) {
+            panic("page fault, access not in vmas");
+        }
+        uint64 c = exception_code_to_vm_flags(exception_code);
+        if ((c & p->vm_flags) != c) {
+            panic("page fault, illegal access mode");
+        }
+        panic("this should not happen");
     }
 }
 
 void print_trap(uint64 isi, uint64 exc) {
-    const char *s = "unknown";
+    const char *s = "unknown\n";
     if (isi && exc == SUPERVISOR_TIMER_INTERRUPT) s = "timer interrupt\n";
     if (!isi && exc == INSTRUCTION_PAGE_FAULT) s = "instruction page fault\n";
     if (!isi && exc == LOAD_PAGE_FAULT) s = "load page fault\n";
