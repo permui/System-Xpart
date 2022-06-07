@@ -1,6 +1,6 @@
 #include "syscall.h"
 #include "stdio.h"
-#include "string.h"
+#include "../include/string.h"
 
 void runcmd(char* cmd) {
 	exec(cmd);

@@ -1,7 +1,8 @@
 #ifndef _SBI_H
 #define _SBI_H
 
-#define SBI_PUTCHAR 0x1
+#define SBI_PUTCHAR_EID 0x1
+#define SBI_GETCHAR_EID 0x2
 
 #include "types.h"
 

@@ -31,7 +31,7 @@ uint64* create_user_page_table() {
     return root_table;
 }
 
-// it has set t.(state, counter, priority, tid) and put it into task[]
+// it has set t.(state, counter, priority, tid, kernel_stack_top) and put it into task[]
 // also alloc memory for t.(thread_info, mm, trapframe)
 struct task_struct *create_task() {
     uint64 tid = ++tot_task;
@@ -46,6 +46,8 @@ struct task_struct *create_task() {
     t->thread_info->user_stack_pa = 0;
     t->mm = (struct mm_struct *)kcalloc(sizeof(struct mm_struct));
     t->trapframe = (struct pt_regs *)kcalloc(sizeof(struct pt_regs));
+
+    t->kernel_stack_top = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
 
     task[t->tid] = t;
 
@@ -92,14 +94,13 @@ void load_elf(struct task_struct *t, const char *path) {
 
     do_mmap(t->mm, USER_END - USER_STACK_LIMIT, USER_STACK_LIMIT, VM_READ | VM_WRITE);
 
-    // let's test if shell runs successfully !
 }
 
 void create_first_task() {
     struct task_struct *t = create_task();
 
     t->thread.ra = (uint64)__dummy;
-    t->thread.sp = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
+    t->thread.sp = t->kernel_stack_top;
 
     load_elf(t, "shell");
 

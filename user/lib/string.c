@@ -1,7 +1,7 @@
 #include "string.h"
 
 #include "stdio.h"
-#include "syscall.h"
+#include "../include/syscall.h"
 
 char *gets(char *buf, int max) {
     int i, cc;

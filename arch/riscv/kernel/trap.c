@@ -61,13 +61,13 @@ void handle_page_fault(uint64 exception_code, struct pt_regs *regs) {
 
 void print_trap(uint64 isi, uint64 exc) {
     const char *s = "unknown";
-    if (isi && exc == SUPERVISOR_TIMER_INTERRUPT) s = "timer interrupt";
-    if (!isi && exc == INSTRUCTION_PAGE_FAULT) s = "instruction page fault";
-    if (!isi && exc == LOAD_PAGE_FAULT) s = "load page fault";
-    if (!isi && exc == STORE_PAGE_FAULT) s = "store page fault";
-    if (!isi && exc == ECALL_FROM_U_MODE) s = "ecall from U-mode";
-    if (!isi && exc == ILLEGAL_INSTRUCTION) s = "illegal instruction";
-    printk("trap: %s\n", s);
+    if (isi && exc == SUPERVISOR_TIMER_INTERRUPT) s = "timer interrupt\n";
+    if (!isi && exc == INSTRUCTION_PAGE_FAULT) s = "instruction page fault\n";
+    if (!isi && exc == LOAD_PAGE_FAULT) s = "load page fault\n";
+    if (!isi && exc == STORE_PAGE_FAULT) s = "store page fault\n";
+    if (!isi && exc == ECALL_FROM_U_MODE) s = "";
+    if (!isi && exc == ILLEGAL_INSTRUCTION) s = "illegal instruction\n";
+    printk("trap: %s", s);
 }
 
 void trap_handler(uint64 scause, struct pt_regs *regs) {

@@ -45,6 +45,9 @@ struct task_struct {
     struct mm_struct *mm;
 
     struct pt_regs *trapframe;
+
+    // that is, the initial kernel stack pointer
+    uint64 kernel_stack_top;
 };
 
 uint64* create_user_page_table();

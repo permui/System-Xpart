@@ -156,9 +156,6 @@ _sret_from_traps:
     .global __dummy
 __dummy:
 
-    // uapp starts at 0x0 in user space
-    csrw sepc, zero
-
     // swap sscratch <-> sp
     // after this
     //  sp points to USER_END, the initial user stack pointer place

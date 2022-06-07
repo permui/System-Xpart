@@ -1,9 +1,6 @@
 #include "printk.h"
 #include "sbi.h"
-
-void putc(char c) {
-  sbi_ecall(SBI_PUTCHAR, 0, c, 0, 0, 0, 0, 0);
-}
+#include "baseio.h"
 
 static int vprintfmt(void(*putch)(char), const char *fmt, va_list vl) {
     int in_format = 0, longarg = 0;

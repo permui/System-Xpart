@@ -25,12 +25,10 @@ all: clean
 
 run: all
 	@echo Launch the qemu ......
-	# @qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default -initrd user/build/demo.bin
 	@qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -initrd user/build/simple_fs.cpio
 
 debug: all
 	@echo Launch the qemu for debug ......
-	# @qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -bios default -initrd user/build/demo.bin -S -s
 	@qemu-system-riscv64 -nographic -machine virt -kernel vmlinux -initrd user/build/simple_fs.cpio -S -s
 
 clean:
