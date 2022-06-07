@@ -6,6 +6,8 @@
 #include "string.h"
 #include "slub.h"
 #include "fs.h"
+#include "elf.h"
+#include "utils.h"
 
 extern void __dummy();
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
@@ -52,10 +54,45 @@ struct task_struct *create_task() {
 
 void load_elf(struct task_struct *t, const char *path) {
     struct inode *i = namei(path);
-    uint64 x;
-    readi(i, 0, &x, 0, 8);
-    printk("load_elf: x = %016lx\n", x);
-    panic("todo"); // todo
+    struct elfhdr hdr;
+    readi(i, 0, &hdr, 0, sizeof(hdr));
+    printk("load_elf: hdr. = %03x\n", hdr.magic);
+    printk("file size = %lu\n", get_file_size(i));
+
+    uint64 *page_table_va = create_user_page_table();
+    
+    // load "LOAD" segments: copy into memory, map_range in page_table
+    uint proghdr_size = sizeof(struct proghdr);
+    for (uint s = hdr.phoff, j = 0; j < hdr.phnum; ++j, s += proghdr_size) {
+        struct proghdr p;
+        readi(i, 0, &p, s, proghdr_size);
+        if (p.type == ELF_PROG_LOAD) {
+            myassert(p.align == PGSIZE);
+            uint64 va_start = PGROUNDDOWN(p.vaddr);
+            uint64 va_end = PGROUNDUP(p.vaddr + p.memsz); 
+            uint64 mem_size = va_end - va_start;
+            if (mem_size) {
+                // this is aligned to page boundary.
+                // guaranteed by implementation.
+                void *q = kcalloc(mem_size); 
+                readi(i, 0, q + (p.vaddr - va_start), p.off, p.filesz);
+                uint64 vm_flags = elf_segment_flags_to_vm_flags(p.flags);
+                uint64 pte_flags = vm_flags_to_pte_flags(vm_flags) | PTE_U;
+                map_range(page_table_va, va_start, va_end, va_to_pa((uint64)q), pte_flags);
+                do_mmap(t->mm, va_start, mem_size, vm_flags);
+            }
+        }
+    }
+
+    t->page_table = va_to_pa((uint64)page_table_va);
+
+    t->thread.sepc = hdr.entry;
+    t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;
+    t->thread.sscratch = USER_END;
+
+    do_mmap(t->mm, USER_END - USER_STACK_LIMIT, USER_STACK_LIMIT, VM_READ | VM_WRITE);
+
+    // let's test if shell runs successfully !
 }
 
 void create_first_task() {
@@ -64,9 +101,9 @@ void create_first_task() {
     t->thread.ra = (uint64)__dummy;
     t->thread.sp = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
 
-    t->page_table = va_to_pa((uint64)create_user_page_table());
-
     load_elf(t, "shell");
+
+    // t->page_table = va_to_pa((uint64)create_user_page_table());
 
     // t->thread.sepc = USER_START;
     // t->thread.sstatus = SSTATUS_SPIE | SSTATUS_SUM;

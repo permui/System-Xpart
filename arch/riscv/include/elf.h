@@ -51,4 +51,8 @@ struct proghdr {
 #define ELF_PROG_FLAG_WRITE     2
 #define ELF_PROG_FLAG_READ      4
 
+// utility functions
+
+uint64 elf_segment_flags_to_vm_flags(uint32 seg_flags);
+
 #endif

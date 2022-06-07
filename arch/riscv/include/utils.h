@@ -4,5 +4,6 @@
 #include "types.h"
 
 uint64 max(uint64 x, uint64 y);
+void myassert(int b);
 
 #endif

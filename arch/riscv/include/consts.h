@@ -20,8 +20,12 @@
 #define PGROUNDUP(addr) PGROUNDDOWN((addr) + PGSIZE - 1)
 
 // user space virtual address
+// [USER_END - USER_STACK_LIMIT, USER_END) is used as user stack.
+// These memory are allocated on demand.
 #define USER_START (0x0000000000000000)
 #define USER_END (0x0000004000000000)
+
+#define USER_STACK_LIMIT (0x0000001000000000)
 
 // sstatus register bits
 #define SSTATUS_SPIE (1ul << 5)

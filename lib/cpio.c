@@ -48,13 +48,13 @@ size_t getFieldVal(char *field, int length) {
     return value;
 }
 
-int check_file_name(char *tar, char *cmp) {
+int check_file_name(const char *tar, const char *cmp) {
     while (*tar && *tar == *cmp)
         tar++, cmp++;
     return *tar - *cmp;
 }
 
-struct cpio_stat cpio_find_file(char *name) {
+struct cpio_stat cpio_find_file(const char *name) {
     struct cpio_stat stat = {.c_ino = 0};
     struct cpio_newc_header *p = (struct cpio_newc_header *)INITRD_START; 
 
@@ -131,7 +131,7 @@ struct cpio_stat cpio_find_file(char *name) {
 //     }
 // }
 
-struct inode *namei(char *path) {
+struct inode *namei(const char *path) {
     struct inode *n = kmalloc(sizeof(struct inode));
     struct cpio_stat *stat = kmalloc(sizeof(struct cpio_stat));
     n->i_private = stat;
@@ -144,4 +144,9 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
     void *base = stat->data;
     memcpy(dst, base + off, n);
     return n;
+}
+
+uint64 get_file_size(struct inode *i) {
+    struct cpio_stat *stat = i->i_private;
+    return stat->c_filesize;
 }

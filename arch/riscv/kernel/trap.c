@@ -47,16 +47,16 @@ void handle_page_fault(uint64 exception_code, struct pt_regs *regs) {
     if ((c & p->vm_flags) != c) {
         panic("page fault, illegal access mode");
     }
-    // ok, map range
-    uint64 pstart = 0;
-    if (0 <= addr && addr < USER_PROGRAM_LEN) {
-        // panic("mapping user code, this does not work"); // todo
-        pstart = (uint64)0x84200000; 
+
+    // the stack part
+    if (p->vm_end == USER_END) {
+        uint64 pstart = va_to_pa((uint64)kcalloc(PGSIZE));
+        uint64 v_start = PGROUNDDOWN(addr);
+        uint64 v_end = PGROUNDUP(addr);
+        map_range((uint64*)pa_to_va(current->page_table), v_start, v_end, pstart, vm_flags_to_pte_flags(p->vm_flags) | PTE_U);
     } else {
-        pstart = current->thread_info->user_stack_pa;
-        if (!pstart) pstart = va_to_pa((uint64)kcalloc(PGSIZE));
+        panic("unexpected page fault");
     }
-    map_range((uint64*)pa_to_va(current->page_table), p->vm_start, p->vm_end, pstart, vm_flags_to_pte_flags(p->vm_flags) | PTE_U);
 }
 
 void print_trap(uint64 isi, uint64 exc) {

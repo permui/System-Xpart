@@ -93,6 +93,6 @@ int fs_open(const char *pathname, int flags);
 int fs_read(int fd, void *buf, size_t count);
 int fs_write(int fd, const void *buf, size_t count);
 
-struct inode *namei(char *path);
+struct inode *namei(const char *path);
 int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n);
-
+uint64 get_file_size(struct inode *i);
