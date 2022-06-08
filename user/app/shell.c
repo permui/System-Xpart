@@ -25,27 +25,16 @@ int main(void) {
     while (1) {
         int r = getcmd(buf,sizeof(buf));
         if (r < 0) continue;
-        // fprintf(2, "%s\n", buf);
 
-		// if (strcmp(buf, "hello") == 0) {
-			int pid = fork();
+        if (strcmp(buf, "exit") == 0) break;
 
-			printf("Get pid %d\n", pid);
+        int pid = fork();
 
-			if(pid == 0)
-				runcmd(buf);
-			else if (pid > 0) {
-				wait();
-			}
-				
-			else
-				panic("panic fork");
-		// }
-		// else {
-		// 	printf("Invalid command %s\n", buf);
-		// }
-		
+        printf("My pid is %d, fork() returns %d\n", getpid(), pid);
 
+        if (pid == 0) runcmd(buf); else
+        if (pid > 0) wait(); else
+        panic("panic fork");
 	}
 
 	exit(0);
