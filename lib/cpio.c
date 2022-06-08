@@ -54,8 +54,7 @@ int check_file_name(const char *tar, const char *cmp) {
     return *tar - *cmp;
 }
 
-struct cpio_stat cpio_find_file(const char *name) {
-    struct cpio_stat stat = {.c_ino = 0};
+struct cpio_stat *cpio_find_file(const char *name) {
     struct cpio_newc_header *p = (struct cpio_newc_header *)INITRD_START; 
 
     if ((name[0] == '.') && (name[1] == '/')) {
@@ -68,18 +67,20 @@ struct cpio_stat cpio_find_file(const char *name) {
         // Log("Current is: %s", p->c_name);
 
         if (!check_file_name(name, p->c_name)) {
-            stat.c_ino = getFieldVal(p->c_ino, 8);
-            stat.c_mode = getFieldVal(p->c_mode, 8);
-            stat.c_uid = getFieldVal(p->c_uid, 8);
-            stat.c_gid = getFieldVal(p->c_gid, 8);
-            stat.c_nlink = getFieldVal(p->c_nlink, 8);
-            stat.c_mtime = getFieldVal(p->c_mtime, 8);
-            stat.c_filesize = getFieldVal(p->c_filesize, 8);
-            stat.c_devmajor = getFieldVal(p->c_devmajor, 8);
-            stat.c_devminor = getFieldVal(p->c_devminor, 8);
-            stat.c_rdevmajor = getFieldVal(p->c_rdevmajor, 8);
-            stat.c_rdevminor = getFieldVal(p->c_rdevminor, 8);
-            stat.data = (void *)p + ALIGN4(CPIO_HEADER_SIZE + getFieldVal(p->c_namesize, 8));
+            struct cpio_stat *stat = (struct cpio_stat *)kcalloc(sizeof(struct cpio_stat));
+
+            stat->c_ino = getFieldVal(p->c_ino, 8);
+            stat->c_mode = getFieldVal(p->c_mode, 8);
+            stat->c_uid = getFieldVal(p->c_uid, 8);
+            stat->c_gid = getFieldVal(p->c_gid, 8);
+            stat->c_nlink = getFieldVal(p->c_nlink, 8);
+            stat->c_mtime = getFieldVal(p->c_mtime, 8);
+            stat->c_filesize = getFieldVal(p->c_filesize, 8);
+            stat->c_devmajor = getFieldVal(p->c_devmajor, 8);
+            stat->c_devminor = getFieldVal(p->c_devminor, 8);
+            stat->c_rdevmajor = getFieldVal(p->c_rdevmajor, 8);
+            stat->c_rdevminor = getFieldVal(p->c_rdevminor, 8);
+            stat->data = (void *)p + ALIGN4(CPIO_HEADER_SIZE + getFieldVal(p->c_namesize, 8));
 
             return stat;
         }
@@ -87,7 +88,7 @@ struct cpio_stat cpio_find_file(const char *name) {
         p = (void *)p + ALIGN4(CPIO_HEADER_SIZE + getFieldVal(p->c_namesize, 8)) + ALIGN4(getFieldVal(p->c_filesize, 8));
     }
 
-    return stat;
+    return NULL;
 }
 
 // 070701
@@ -131,11 +132,11 @@ struct cpio_stat cpio_find_file(const char *name) {
 //     }
 // }
 
+// if ret->i_private is NULL, then not found
 struct inode *namei(const char *path) {
     struct inode *n = kmalloc(sizeof(struct inode));
-    struct cpio_stat *stat = kmalloc(sizeof(struct cpio_stat));
-    n->i_private = stat;
-    *stat = cpio_find_file(path);
+    // struct cpio_stat *stat = kmalloc(sizeof(struct cpio_stat));
+    n->i_private = cpio_find_file(path);
     return n;
 }
 
@@ -149,4 +150,12 @@ int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n) {
 uint64 get_file_size(struct inode *i) {
     struct cpio_stat *stat = i->i_private;
     return stat->c_filesize;
+}
+
+int existsQ(const char *path) {
+    struct cpio_stat *s = cpio_find_file(path);
+    if (s != NULL) {
+        kfree(s);
+        return 1;
+    } else return 0;
 }

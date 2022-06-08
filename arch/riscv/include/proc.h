@@ -7,6 +7,7 @@
 #include "consts.h"
 #include "vm.h"
 #include "trap.h"
+#include "list.h"
 
 #define NR_TASKS (1 + 10)
 
@@ -52,6 +53,8 @@ struct task_struct {
 
     // that is, the initial kernel sp
     uint64 kernel_stack_top;
+
+    struct list_head task_node;
 
     struct task_struct *parent;
 };

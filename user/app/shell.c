@@ -1,11 +1,11 @@
-#include "syscall.h"
+#include "../include/syscall.h"
 #include "stdio.h"
 #include "../include/string.h"
 #include "interactive.h"
 
 void runcmd(char* cmd) {
 	exec(cmd);
-	fprintf(2, "exec %s failed\n", cmd);
+	fprintf(2, "child: exec %s failed, maybe the executable does not exists\n", cmd);
 	exit(0);
 }
 
@@ -27,7 +27,7 @@ int main(void) {
         if (r < 0) continue;
         // fprintf(2, "%s\n", buf);
 
-		if (strcmp(buf, "hello") == 0) {
+		// if (strcmp(buf, "hello") == 0) {
 			int pid = fork();
 
 			printf("Get pid %d\n", pid);
@@ -40,10 +40,10 @@ int main(void) {
 				
 			else
 				panic("panic fork");
-		}
-		else {
-			printf("Invalid command %s\n", buf);
-		}
+		// }
+		// else {
+		// 	printf("Invalid command %s\n", buf);
+		// }
 		
 
 	}

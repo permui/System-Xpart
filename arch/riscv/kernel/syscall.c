@@ -7,6 +7,7 @@
 #include "baseio.h"
 #include "utils.h"
 #include "panic.h"
+#include "fs.h"
 
 extern struct task_struct *current;
 extern void child_ret_from_clone();
@@ -140,6 +141,11 @@ void sys_read(struct pt_regs *regs) {
 
 void sys_execve(struct pt_regs *regs) {
     const char *path = (const char*)regs->x[10];
+
+    if (!existsQ(path)) {
+        regs->x[10] = (uint64)(-1);
+        return;
+    }
 
     // we must save the path, because it's in user memory, which
     // will be unmaped when clearing current's memory

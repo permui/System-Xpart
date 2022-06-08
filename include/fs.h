@@ -96,3 +96,4 @@ int fs_write(int fd, const void *buf, size_t count);
 struct inode *namei(const char *path);
 int readi(struct inode *ip, int user_dst, void *dst, uint off, uint n);
 uint64 get_file_size(struct inode *i);
+int existsQ(const char *path);

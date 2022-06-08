@@ -14,7 +14,7 @@ extern void __switch_to(struct task_struct *prev, struct task_struct *next);
 
 struct task_struct *idle;
 struct task_struct *current;
-struct task_struct *task[NR_TASKS];
+struct list_head tasks;
 uint64 tot_task = 0;
 
 extern char uapp_start[], uapp_end[];
@@ -31,7 +31,7 @@ uint64* create_user_page_table() {
     return root_table;
 }
 
-// it has set t.(state, counter, priority, tid, kernel_stack_top) and put it into task[]
+// it has set t.(state, counter, priority, tid, kernel_stack_top) and add it into the linked list
 // also alloc memory for t.(thread_info, mm, trapframe)
 struct task_struct *create_task() {
     uint64 tid = ++tot_task;
@@ -49,7 +49,7 @@ struct task_struct *create_task() {
 
     t->kernel_stack_top = (uint64)kcalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
 
-    task[t->tid] = t;
+    list_add_tail(&t->task_node, &tasks);
 
     return t;
 }
@@ -120,18 +120,20 @@ void create_first_task() {
     // do_mmap(t->mm, USER_START, USER_PROGRAM_LEN, VM_READ | VM_WRITE | VM_EXEC);
     // do_mmap(t->mm, USER_END - PGSIZE, PGSIZE, VM_READ | VM_WRITE);
 
-    task[t->tid] = t;
 }
 
 void task_init() {
+
+    INIT_LIST_HEAD(&tasks);
+
     idle = (struct task_struct*)kcalloc(sizeof(struct task_struct));
     idle->state = TASK_RUNNING;
     idle->counter = 0;
     idle->priority = 0;
     idle->tid = 0;
-    current = task[0] = idle;
+    current = idle;
 
-    for (int i = 1; i < NR_TASKS; ++i) task[i] = NULL;
+    list_add_tail(&idle->task_node, &tasks);
 
     create_first_task();
 
@@ -171,43 +173,46 @@ void do_timer() {
 // We assume the only state is TASK_RUNNING.
 // I think not checking it is better than
 // checking it, even the effects are the same.
-uint64 schedule_sjf() {
-    uint64 counter_mi = 0, id = 0;
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
-        if (task[i]->counter != 0) {
-            if (counter_mi == 0 || task[i]->counter < counter_mi) {
-                counter_mi = task[i]->counter;
-                id = i;
+struct task_struct *schedule_sjf() {
+    uint64 counter_mi = 0;
+    struct task_struct *ret = NULL;
+    struct task_struct *t;
+    list_for_each_entry(t, &tasks, task_node) if (t->tid != 0 && t->state == TASK_RUNNING) {
+        if (t->counter != 0) {
+            if (counter_mi == 0 || t->counter < counter_mi) {
+                counter_mi = t->counter;
+                ret = t;
             }
         }
     }
-    if (counter_mi != 0) return id;
+    if (counter_mi != 0) return ret;
 
-    // if equal to zero, then all counters of task[1..NR_TASKS-1] where task exists and running
+    // if equal to zero, then all counters of non-idle tasks where task exists and running
     // are zero. Repopulate.
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
-        task[i]->counter = rand_range(2, 4);
-        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
+    list_for_each_entry(t, &tasks, task_node) if (t->tid != 0 && t->state == TASK_RUNNING) {
+        t->counter = rand_range(2, 4);
+        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", t->tid, t->priority, t->counter);
     }
     return schedule_sjf();
 }
 
-uint64 schedule_priority() {
+struct task_struct *schedule_priority() {
     uint64 counter_mx = 0, id = 0;
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
-        if (task[i]->counter > counter_mx) {
-            counter_mx = task[i]->counter;
-            id = i;
+    struct task_struct *t, *ret = NULL;
+    list_for_each_entry(t, &tasks, task_node) if (t->tid != 0 && t->state == TASK_RUNNING) {
+        if (t->counter > counter_mx) {
+            counter_mx = t->counter;
+            ret = t;
         }
     }
-    if (counter_mx != 0) return id;
+    if (counter_mx != 0) return ret;
 
-    // if equal to zero, then all counters of task[1..NR_TASKS-1]
+    // if equal to zero, then all counters of non-idle tasks
     // are zero. Repopulate **according to priority**.
     // Higher priority number, higher priority.
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
-        task[i]->counter = task[i]->priority;
-        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
+    list_for_each_entry(t, &tasks, task_node) if (t->tid != 0 && t->state == TASK_RUNNING) {
+        t->counter = t->priority;
+        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", t->tid, t->priority, t->counter);
     }
     return schedule_priority();
 }
@@ -223,6 +228,6 @@ uint64 schedule_priority() {
 #endif
 
 void schedule() {
-    uint64 nxt_id = schedule_algo();
-    switch_to(task[nxt_id]);
+    struct task_struct *next = schedule_algo();
+    switch_to(next);
 }
