@@ -17,24 +17,35 @@ void syscall(struct pt_regs *regs) {
     uint64 syscall_num = regs->x[17]; // a7
     switch (syscall_num) {
         case SYS_WRITE:
-            printk("syscall: write\n");
+            printk_info("syscall: write\n");
             sys_write(regs);
             break;
         case SYS_GETPID:
-            printk("syscall: getpid\n");
+            printk_info("syscall: getpid\n");
             sys_getpid(regs);
             break;
         case SYS_CLONE:
-            printk("syscall: clone\n");
+            printk_info("syscall: clone\n");
             sys_clone(regs);
             break;
         case SYS_READ:
-            printk("syscall: read\n");
+            printk_info("syscall: read\n");
             sys_read(regs);
             break;
         case SYS_EXECVE:
-            printk("syscall: execve\n");
+            printk_info("syscall: execve\n");
             sys_execve(regs);
+            break;
+        case SYS_WAIT:
+            printk_info("syscall: wait\n");
+            sys_wait(regs);
+            break;
+        case SYS_EXIT:
+            printk_info("syscall: exit\n");
+            sys_exit(regs);
+            break;
+        default:
+            printk_info("syscall: unknown\n");
             break;
     }
 }
@@ -57,6 +68,8 @@ void child_ret_from_clone() {
 
 void sys_clone(struct pt_regs *regs)  {
     struct task_struct *child = create_task();
+
+    child->parent = current;
 
     // child's page table
     child->page_table = va_to_pa((uint64)create_user_page_table());
@@ -127,11 +140,18 @@ void sys_read(struct pt_regs *regs) {
 
 void sys_execve(struct pt_regs *regs) {
     const char *path = (const char*)regs->x[10];
+
+    // we must save the path, because it's in user memory, which
+    // will be unmaped when clearing current's memory
+    uint64 len = strlen(path) + 1;
+    char *buf = (char*)kmalloc(len);
+    memcpy(buf, path, len);
     
     // we assume the path points to a legal elf file
      
     // current -> state, counter, priority, tid : no change
     // current -> thread : does not matter. we don't use _switch_to to go back
+    // current -> parent : no change
 
     // clear current's memory
     uint64 *root_ptb = (uint64*)pa_to_va(current->page_table);
@@ -146,7 +166,11 @@ void sys_execve(struct pt_regs *regs) {
         current->mm->mmap = NULL;
     }
 
-    uint64 entry_va = init_with_elf(current, path);
+    clear_tlb();
+
+    uint64 entry_va = init_with_elf(current, buf);
+
+    kfree(buf);
 
     do_mmap(current->mm, USER_END, 0, VM_READ | VM_WRITE);
 
@@ -156,4 +180,20 @@ void sys_execve(struct pt_regs *regs) {
     current->trapframe->stval = 0; // doesn't matter
 
     _ret_by_trapframe(current->trapframe);
+}
+
+void sys_wait(struct pt_regs *regs) {
+    current->state = TASK_PENDING;
+    schedule();
+}
+
+void sys_exit(struct pt_regs *regs) {
+    myassert(current->parent != NULL);
+    while (1) {
+        if (current->parent->state == TASK_PENDING) break;
+        schedule();
+    }
+    current->parent->state = TASK_RUNNING;
+    current->state = TASK_TERMINATED;
+    schedule();
 }

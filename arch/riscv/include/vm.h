@@ -51,5 +51,6 @@ void setup_vm_first();
 
 void setup_vm_second();
 
+void clear_tlb();
 
 #endif

@@ -95,6 +95,8 @@ uint64 init_with_elf(struct task_struct *t, const char *path) {
 void create_first_task() {
     struct task_struct *t = create_task();
 
+    t->parent = NULL;
+
     t->thread.ra = (uint64)__dummy;
     t->thread.sp = t->kernel_stack_top;
 
@@ -133,7 +135,7 @@ void task_init() {
 
     create_first_task();
 
-    printk("...proc_init done!\n");
+    printk_info("...proc_init done!\n");
 }
 
 // the user application
@@ -146,7 +148,7 @@ void dummy() {
         if (lst_counter == -1 || lst_counter != current->counter) {
             lst_counter = current->counter;
             incer = (incer + 1) % MOD;
-            printk("[TID = %lu] running, incer = %lu\n", current->tid, incer);
+            printk_info("[TID = %lu] running, incer = %lu\n", current->tid, incer);
         }
     }
 }
@@ -155,7 +157,7 @@ void switch_to(struct task_struct *next) {
     if (current != next) {
         struct task_struct *prev = current;
         current = next;
-        printk("switch to [TID = %lu, Priority = %lu, Counter = %lu]\n", next->tid, next->priority, next->counter);
+        printk_info("switch to [TID = %lu, Priority = %lu, Counter = %lu]\n", next->tid, next->priority, next->counter);
         __switch_to(prev, next);
     }
 }
@@ -171,7 +173,7 @@ void do_timer() {
 // checking it, even the effects are the same.
 uint64 schedule_sjf() {
     uint64 counter_mi = 0, id = 0;
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i]) {
+    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
         if (task[i]->counter != 0) {
             if (counter_mi == 0 || task[i]->counter < counter_mi) {
                 counter_mi = task[i]->counter;
@@ -181,18 +183,18 @@ uint64 schedule_sjf() {
     }
     if (counter_mi != 0) return id;
 
-    // if equal to zero, then all counters of task[1..NR_TASKS-1]
+    // if equal to zero, then all counters of task[1..NR_TASKS-1] where task exists and running
     // are zero. Repopulate.
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i]) {
+    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
         task[i]->counter = rand_range(2, 4);
-        printk("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
+        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
     }
     return schedule_sjf();
 }
 
 uint64 schedule_priority() {
     uint64 counter_mx = 0, id = 0;
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i]) {
+    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
         if (task[i]->counter > counter_mx) {
             counter_mx = task[i]->counter;
             id = i;
@@ -203,9 +205,9 @@ uint64 schedule_priority() {
     // if equal to zero, then all counters of task[1..NR_TASKS-1]
     // are zero. Repopulate **according to priority**.
     // Higher priority number, higher priority.
-    for (int i = 1; i < NR_TASKS; ++i) if (task[i]) {
+    for (int i = 1; i < NR_TASKS; ++i) if (task[i] && task[i]->state == TASK_RUNNING) {
         task[i]->counter = task[i]->priority;
-        printk("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
+        printk_info("SET [TID = %d, Priority = %lu, Counter <- %lu]\n", i, task[i]->priority, task[i]->counter);
     }
     return schedule_priority();
 }

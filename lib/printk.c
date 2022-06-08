@@ -1,8 +1,9 @@
 #include "printk.h"
 #include "sbi.h"
 #include "baseio.h"
+#include "consts.h"
 
-static int vprintfmt(void(*putch)(char), const char *fmt, va_list vl) {
+static int vprintfmt(void(*putch)(int), const char *fmt, va_list vl) {
     int in_format = 0, longarg = 0;
     size_t pos = 0;
     for( ; *fmt; fmt++) {
@@ -106,5 +107,16 @@ int printk(const char* s, ...) {
     va_start(vl, s);
     res = vprintfmt(putc, s, vl);
     va_end(vl);
+    return res;
+}
+
+int printk_info(const char *s, ...) {
+    int res = 0;
+    if (PRINTK_INFO) {
+        va_list vl;
+        va_start(vl, s);
+        res = vprintfmt(putc, s, vl);
+        va_end(vl);
+    }
     return res;
 }

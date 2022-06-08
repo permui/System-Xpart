@@ -20,3 +20,9 @@ void *memcpy(void *dst, const void *src, uint64 n) {
 
     return dst;
 }
+
+uint64 strlen(const char *s) {
+    uint64 ret = 0;
+    while (*s != '\0') ++s, ++ret;
+    return ret;
+}

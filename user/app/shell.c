@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "stdio.h"
 #include "../include/string.h"
+#include "interactive.h"
 
 void runcmd(char* cmd) {
 	exec(cmd);
@@ -11,7 +12,7 @@ void runcmd(char* cmd) {
 int getcmd(char *buf, int nbuf) {
 	fprintf(2, "$ ");
 	memset(buf, 0, nbuf);
-	gets(buf, nbuf);
+	interactive_readline(buf, nbuf);
 	if(buf[0] == 0)
 		return -1;
 	return 0;
@@ -21,8 +22,10 @@ int main(void) {
 	static char buf[100];
 	int fd;
 	
-	while(getcmd(buf,sizeof(buf)) >= 0) {
-        fprintf(2, "%s\n", buf);
+    while (1) {
+        int r = getcmd(buf,sizeof(buf));
+        if (r < 0) continue;
+        // fprintf(2, "%s\n", buf);
 
 		if (strcmp(buf, "hello") == 0) {
 			int pid = fork();

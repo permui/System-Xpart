@@ -30,6 +30,16 @@ void *memset(void *dst, int c, unsigned int n) {
     return dst;
 }
 
+void *memcpy(void *dst, const void *src, size_t n) {
+    char *cdst = (char *)dst;
+    const char *csrc = (const char *)src;
+    while (n--) {
+        *cdst = *csrc;
+        ++cdst, ++csrc;
+    }
+    return dst;
+}
+
 int strcmp(const char *p, const char *q) {
     while (*p && *p == *q)
         p++, q++;

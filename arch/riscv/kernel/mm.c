@@ -44,5 +44,5 @@ void kfreerange(char *start, char *end) {
 
 void mm_init(void) {
     kfreerange(_ekernel, (char *)VM_MAP_END);
-    printk("...mm_init done!\n");
+    printk_info("...mm_init done!\n");
 }

@@ -39,7 +39,7 @@ void insert(struct mm_struct *mm, struct vm_area_struct *p) {
 }
 
 uint64 do_mmap(struct mm_struct *mm, uint64 addr, uint64 length, int prot) {
-    printk("do_mmap(%lu, %lu)\n", addr, length);
+    printk_info("do_mmap(%lu, %lu)\n", addr, length);
     if (intersect(mm, addr, addr + length)) addr = get_unmapped_area(mm, length);
     struct vm_area_struct *p = (struct vm_area_struct *)kcalloc(sizeof(struct vm_area_struct));
     p->vm_start = addr;
@@ -210,4 +210,11 @@ void setup_vm_second() {
         : "r" (sec_table_pa)
     );
 
+}
+
+void clear_tlb() {
+    __asm__ (
+        "sfence.vma zero, zero"
+        : :
+    );
 }

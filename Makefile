@@ -12,9 +12,11 @@ INCLUDE = -I $(shell pwd)/include -I $(shell pwd)/arch/riscv/include
 CF = -march=$(ISA) -mabi=$(ABI) -mcmodel=medany -fno-builtin -ffunction-sections -fdata-sections -nostartfiles -nostdlib -nostdinc -static -lgcc -Wl,--nmagic -Wl,--gc-sections 
 OWENCF = -D__xlen=64 -g
 LABCF = -DSJF
-CFLAG = ${CF} ${INCLUDE} ${OWENCF} ${LABCF}
+INFOCF != if [ $(INFO) = 1 ]; then echo -DPRINTK_INFO=1; else echo -DPRINTK_INFO=0; fi
+CFLAG = ${CF} ${INCLUDE} ${OWENCF} ${LABCF} ${INFOCF}
 
 .PHONY:all run debug clean
+
 all: clean
 	${MAKE} -C lib all
 	${MAKE} -C init all

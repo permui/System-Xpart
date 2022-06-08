@@ -81,7 +81,7 @@ void print_trap(uint64 isi, uint64 exc) {
     if (!isi && exc == STORE_PAGE_FAULT) s = "store page fault\n";
     if (!isi && exc == ECALL_FROM_U_MODE) s = "";
     if (!isi && exc == ILLEGAL_INSTRUCTION) s = "illegal instruction\n";
-    printk("trap: %s", s);
+    printk_info("trap: %s", s);
 }
 
 void trap_handler(uint64 scause, struct pt_regs *regs) {

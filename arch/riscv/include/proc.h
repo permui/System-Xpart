@@ -8,10 +8,14 @@
 #include "vm.h"
 #include "trap.h"
 
-#define NR_TASKS (1 + 4)
+#define NR_TASKS (1 + 10)
 
+// task state
 #define TASK_RUNNING 0
+#define TASK_PENDING 1
+#define TASK_TERMINATED 2
 
+// task priority
 #define PRIORITY_MIN 1
 #define PRIORITY_MAX 10
 
@@ -48,6 +52,8 @@ struct task_struct {
 
     // that is, the initial kernel sp
     uint64 kernel_stack_top;
+
+    struct task_struct *parent;
 };
 
 uint64* create_user_page_table();

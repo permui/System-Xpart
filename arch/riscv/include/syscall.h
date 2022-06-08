@@ -24,5 +24,7 @@ void sys_getpid(struct pt_regs *regs);
 void sys_clone(struct pt_regs *regs);
 void sys_read(struct pt_regs *regs);
 void sys_execve(struct pt_regs *regs);
+void sys_wait(struct pt_regs *regs);
+void sys_exit(struct pt_regs *regs);
 
 #endif

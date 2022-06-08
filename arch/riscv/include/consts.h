@@ -58,4 +58,9 @@
 #define FREE_FRAME_YES 1
 #define FREE_FRAME_NO 0
 
+// if printk info
+#ifndef PRINTK_INFO
+#define PRINTK_INFO 1
+#endif
+
 #endif
