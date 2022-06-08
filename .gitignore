@@ -8,3 +8,4 @@ d.s
 Image
 System.map
 vmlinux
+.gdbinit*
