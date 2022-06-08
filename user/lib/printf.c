@@ -1,5 +1,5 @@
 #include "stdio.h"
-#include "syscall.h"
+#include "../include/syscall.h"
 
 int tail = 0;
 char buffer[1000] = {[0 ... 999] = 0};
@@ -104,14 +104,8 @@ static int vprintfmt(int fd, int(*putch)(int), const char *fmt, va_list vl) {
 
     long syscall_ret;
     buffer[tail++] = '\0';
-    asm volatile ("li a7, %1\n"
-                  "mv a0, %2\n"
-                  "mv a1, %3\n"
-                  "mv a2, %4\n"
-                  "ecall\n"
-                  "mv %0, a0\n"
-                  : "+r" (syscall_ret) 
-                  : "i" (SYS_WRITE), "r" (fd), "r" (&buffer), "r" (tail));
+
+    syscall_ret = write(fd, &buffer, tail);
 
     return syscall_ret;
 }
