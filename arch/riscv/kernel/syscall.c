@@ -201,5 +201,8 @@ void sys_exit(struct pt_regs *regs) {
     }
     current->parent->state = TASK_RUNNING;
     current->state = TASK_TERMINATED;
-    schedule();
+
+    free_task(current);
+
+    schedule_no_store();
 }

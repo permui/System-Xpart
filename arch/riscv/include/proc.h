@@ -63,6 +63,8 @@ uint64* create_user_page_table();
 
 uint64 init_with_elf(struct task_struct *t, const char *path);
 
+void free_task(struct task_struct *t);
+
 struct task_struct *create_task();
 
 void task_init();
@@ -70,8 +72,10 @@ void task_init();
 void do_timer();
 
 void schedule();
+void schedule_no_store();
 
 void switch_to(struct task_struct *next);
+void switch_to_no_store(struct task_struct *next);
 
 void dummy();
 

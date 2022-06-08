@@ -223,6 +223,42 @@ __switch_to:
 
     ret
 
+    .global __switch_to_no_store
+__switch_to_no_store:
+    addi a0, a0, TASK_STRUCT_THREAD_OFFSET
+    REG_L ra, 0(a0)
+    REG_L sp, 8(a0)
+    REG_L s0, 16(a0)
+    REG_L s1, 24(a0)
+    REG_L s2, 32(a0)
+    REG_L s3, 40(a0)
+    REG_L s4, 48(a0)
+    REG_L s5, 56(a0)
+    REG_L s6, 64(a0)
+    REG_L s7, 72(a0)
+    REG_L s8, 80(a0)
+    REG_L s9, 88(a0)
+    REG_L s10, 96(a0)
+    REG_L s11, 104(a0)
+
+    REG_L t0, 112(a0)
+    csrw sepc, t0
+    REG_L t0, 120(a0)
+    csrw sstatus, t0
+    REG_L t0, 128(a0)
+    csrw sscratch, t0
+
+    // switch page table
+    addi a0, a0, TASK_STRUCT_THREAD_TO_PAGE_TABLE
+    REG_L t0, 0(a0)
+    srli t0, t0, 12
+    li t1, (1 << 63)
+    or t0, t0, t1
+    csrw satp, t0
+    sfence.vma zero, zero
+
+    ret
+
     .global _ret_by_trapframe
     // child_ret_from_clone, sys_execve use this
 _ret_by_trapframe:

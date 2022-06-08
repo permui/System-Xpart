@@ -19,6 +19,8 @@
 #define PGROUNDDOWN(addr) ((addr) & (~(PGSIZE - 1)))
 #define PGROUNDUP(addr) PGROUNDDOWN((addr) + PGSIZE - 1)
 
+#define PGT_ENNTRY_NUM (PGSIZE >> 3)
+
 // user space virtual address
 // [USER_END - USER_STACK_LIMIT, USER_END) is used as user stack.
 // These memory are allocated on demand.

@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "../include/syscall.h"
 
 #define LEN 10
 int f[LEN];

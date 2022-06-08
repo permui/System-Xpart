@@ -11,6 +11,7 @@
 
 extern void __dummy();
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
+extern void __switch_to_no_store(struct task_struct *next);
 
 struct task_struct *idle;
 struct task_struct *current;
@@ -29,6 +30,33 @@ uint64* create_user_page_table() {
     memcpy(root_table, second_page_table, sizeof(second_page_table));
 
     return root_table;
+}
+
+void free_task(struct task_struct *t) {
+    if (t == NULL) return;
+
+    // free pages
+    uint64 *root_pgt = (uint64*)pa_to_va(t->page_table);
+
+    struct vm_area_struct *p = t->mm->mmap;
+    while (p) {
+        struct vm_area_struct *q = p->vm_next;
+        unmap_range(root_pgt, p->vm_start, p->vm_end, FREE_FRAME_YES);
+        kfree(p);
+        p = q;
+    }
+
+    free_page_table(root_pgt);
+    
+    // now, only the kernel part, that is, second_page_table remains
+
+    kfree(t->thread_info);
+    kfree(t->mm);
+    kfree(t->trapframe);
+
+    list_del(&t->task_node);
+
+    kfree(t);
 }
 
 // it has set t.(state, counter, priority, tid, kernel_stack_top) and add it into the linked list
@@ -164,6 +192,12 @@ void switch_to(struct task_struct *next) {
     }
 }
 
+void switch_to_no_store(struct task_struct *next) {
+    current = next;
+    printk_info("switch to [TID = %lu, Priority = %lu, Counter = %lu]\n", next->tid, next->priority, next->counter);
+    __switch_to_no_store(next);
+}
+
 void do_timer() {
     if (current == idle || --current->counter == 0) {
         schedule();
@@ -230,4 +264,9 @@ struct task_struct *schedule_priority() {
 void schedule() {
     struct task_struct *next = schedule_algo();
     switch_to(next);
+}
+
+void schedule_no_store() {
+    struct task_struct *next = schedule_algo();
+    switch_to_no_store(next);
 }

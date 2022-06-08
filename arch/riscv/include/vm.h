@@ -53,4 +53,8 @@ void setup_vm_second();
 
 void clear_tlb();
 
+// free unused sub-page tables
+// will not free the root page table
+void free_page_table(uint64 *root);
+
 #endif

@@ -218,3 +218,30 @@ void clear_tlb() {
         : :
     );
 }
+
+uint64 free_page_table_aux(uint64 *table, uint64 lev) {
+    if (lev < 2) {
+        uint64 has_valid = 0;
+        for (uint64 i = 0; i < PGT_ENNTRY_NUM; ++i) if (table[i] & PTE_V) {
+            uint64 *p = (uint64*)pte_to_va(table[i]);
+            uint64 res = free_page_table_aux(p, lev + 1);
+            if (!res) {
+                table[i] = 0;
+                kfree(p);
+            }
+            has_valid |= res;
+        }
+        return has_valid;
+    } else {
+        uint64 has_valid = 0;
+        for (uint64 i = 0; i < PGT_ENNTRY_NUM; ++i) if (table[i] & PTE_V) {
+            has_valid = 1;
+            break;
+        }
+        return has_valid;
+    }
+}
+
+void free_page_table(uint64 *root) {
+    free_page_table_aux(root, 0);
+}
