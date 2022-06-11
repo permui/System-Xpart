@@ -11,7 +11,6 @@
 
 extern void __dummy();
 extern void __switch_to(struct task_struct *prev, struct task_struct *next);
-extern void __switch_to_no_store(struct task_struct *next);
 
 struct task_struct *idle;
 struct task_struct *current;
@@ -192,12 +191,6 @@ void switch_to(struct task_struct *next) {
     }
 }
 
-void switch_to_no_store(struct task_struct *next) {
-    current = next;
-    printk_info("switch to [TID = %lu, Priority = %lu, Counter = %lu]\n", next->tid, next->priority, next->counter);
-    __switch_to_no_store(next);
-}
-
 void do_timer() {
     if (current == idle || --current->counter == 0) {
         schedule();
@@ -264,9 +257,4 @@ struct task_struct *schedule_priority() {
 void schedule() {
     struct task_struct *next = schedule_algo();
     switch_to(next);
-}
-
-void schedule_no_store() {
-    struct task_struct *next = schedule_algo();
-    switch_to_no_store(next);
 }

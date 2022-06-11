@@ -9,7 +9,7 @@
 #include "panic.h"
 #include "fs.h"
 
-extern struct task_struct *current;
+extern struct task_struct *current, *idle;
 extern void child_ret_from_clone();
 extern void _ret_by_trapframe(struct pt_regs *);
 extern void _ret_from_execve();
@@ -204,5 +204,6 @@ void sys_exit(struct pt_regs *regs) {
 
     free_task(current);
 
-    schedule_no_store();
+    current = idle;
+    schedule();
 }
